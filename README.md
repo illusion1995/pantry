@@ -1,70 +1,145 @@
 # Pantry
 
-A simple pantry inventory for an Android phone. Scan a barcode to add food, tap − when something gets used, and anything that runs out lands on the **Need to buy** list automatically. Family members sign in with Google and share the same pantry.
+**Live app: https://illusion1995.github.io/pantry/**
 
-It's an installable web app (PWA): it runs in Chrome, can be added to the home screen, and keeps working offline (changes sync when the connection comes back).
+A simple, shared pantry inventory for an Android phone. Scan a barcode to add food, tap − when something gets used, and anything that runs out lands on the **Need to buy** list automatically. Family members sign in with Google and share the same pantry.
 
-- **Hosting:** GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`.
-- **Data and sign-in:** Firebase (Firestore + Google sign-in). Config is in `src/firebaseConfig.ts`; access rules are in `firestore.rules`.
+It's an installable web app (PWA): it runs in Chrome, can be added to the home screen like a normal app, and keeps working without internet (changes sync when the connection comes back).
+
+- **Using the app:** see the [User guide](docs/USER_GUIDE.md), written for the people who use it every day.
+- **Hosting:** GitHub Pages, deployed automatically by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main`.
+- **Data and sign-in:** Firebase (Cloud Firestore + Google sign-in), free Spark plan. Config is in [`src/firebaseConfig.ts`](src/firebaseConfig.ts); access rules are in [`firestore.rules`](firestore.rules).
+- **Product names and photos:** [Open Food Facts](https://world.openfoodfacts.org), a free public product database.
+
+## Features
+
+| Screen | What it does |
+| --- | --- |
+| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. Unknown barcodes ask for a name once and are remembered. |
+| My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
+| Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
+| Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
+| Change item | Tap an item's name to rename it, fix its count, or delete it. |
+| Share this pantry | Add or remove family members by Google email. Sign out. |
+| Back up | Saves the pantry to a JSON file and restores from one. |
+
+Design goals: large text (20px base, [Atkinson Hyperlegible Next](https://www.brailleinstitute.org/freefont/)), big tap targets, high contrast, few screens, minimal typing. Counts are shown on yellow "shelf tags."
 
 ## Running it locally
 
+Requires Node.js 22 or newer (the deploy workflow uses 24).
+
 ```bash
 npm install
-npm run dev
+npm run dev          # http://localhost:5173, uses the real Firebase project
 ```
 
-Then open http://localhost:5173. Sign-in works on `localhost` because Firebase allows it by default.
+Sign-in works on `localhost` because Firebase allows it by default. The camera works on `localhost` too, but a phone needs the `https://` site.
 
 ```bash
-npm run build     # type-check + production build into dist/
-npm run preview   # serve the production build locally
+npm run build        # type-check + production build into dist/
+npm run preview      # serve the production build locally
+npm run typecheck    # type-check only
 ```
 
 ### Testing against local Firebase emulators
 
-The emulators use `firestore.rules` and fake accounts, so nothing touches the real project. They need Java 21+.
+The emulators run Auth and Firestore on your computer with the real `firestore.rules` and fake accounts, so nothing touches the live data. They need Java 21+.
 
 ```bash
 npm run emulators        # terminal 1: Auth on :9099, Firestore on :8085
-npm run dev:emulators    # terminal 2: the app, wired to the emulators
+npm run dev:emulators    # terminal 2: the app on :5173, wired to the emulators
 ```
 
-In the browser console, `await emulatorSignIn('someone@example.test')` signs in as a fake Google account.
+In the browser console, `await emulatorSignIn('someone@example.test')` signs in as a fake Google account (the pop-up sign-in isn't needed). Emulator data is thrown away when they stop.
 
-## Firebase setup (one time)
+## Deploying
 
-1. Create a Firebase project.
-2. **Authentication → Sign-in method:** enable **Google**.
-3. **Authentication → Settings → Authorized domains:** add `<github-username>.github.io`.
-4. **Firestore Database:** create it in production mode, then paste `firestore.rules` into the **Rules** tab and publish.
-5. **Project settings → Your apps:** add a Web app and copy its config into `src/firebaseConfig.ts`.
+- **The app:** push to `main`. GitHub Actions builds and publishes it in about a minute. Phones pick up the new version the next time the app is opened (sometimes it takes a second reload, because the service worker updates in the background).
+- **Security rules:** after editing `firestore.rules`, publish them either by pasting into Firebase console → Firestore Database → **Rules** → **Publish**, or from the command line:
 
-## How sharing works
-
-A pantry is a Firestore document at `pantries/{id}` with a `memberEmails` list. Items live at `pantries/{id}/items/{itemId}`. Anyone whose Google email is on the list can open the pantry. People are added or removed on the **Share this pantry** screen, and a newly added person's pantry opens on its own after they sign in.
+  ```bash
+  npx firebase login                              # once
+  npx firebase deploy --only firestore:rules      # uses the project in .firebaserc
+  ```
 
 ## How it works
 
-| Screen | What it does |
-| --- | --- |
-| Scan item | Camera barcode scan → looks the product up in [Open Food Facts](https://world.openfoodfacts.org) → asks how many → adds to the pantry |
-| My pantry | Everything in stock, with search and big −/+ buttons |
-| Need to buy | Everything at zero, with a Share button (text, email, etc.) and "Bought it" |
-| Add without a barcode | For produce, bulk bins, home-canned food |
-| Share this pantry | Add or remove family members by Google email, sign out |
-| Back up | Saves/restores a JSON backup file |
+### Data model
+
+```
+pantries/{pantryId}
+  name: "Pantry"
+  ownerUid: string            // who created it
+  memberEmails: string[]      // lowercase Google emails of everyone who shares it
+  createdAt: number           // ms since epoch
+
+pantries/{pantryId}/items/{itemId}
+  id, name, quantity (int), createdAt, updatedAt
+  barcode?, brand?, size?, imageUrl?   // missing for items added by name
+```
+
+An item with `quantity` 0 is "out" and appears on Need to buy. Nothing is deleted when it runs out.
+
+### Sharing and security
+
+Anyone whose Google email is in a pantry's `memberEmails` can open it. `firestore.rules` enforces this on the server: only members can read or change a pantry and its items, members can add or remove people, and anyone signed in can start a new pantry containing only themselves. A newly added person's pantry opens on its own after they sign in (the app listens for pantries containing their email).
+
+The Firebase web config in `src/firebaseConfig.ts` is not a secret; it only identifies the project. The rules are what protect the data.
+
+### Offline and syncing
+
+- Firestore keeps a copy of the pantry in the browser (persistent cache), so the app opens and works without internet.
+- Writes are **not awaited**: Firestore applies them locally at once and sends them when it can, so buttons never hang on a bad connection. If the server rejects a change, the app shows a message.
+- Firestore listeners stop for good after an error, so the items listener retries with backoff. This matters right after a pantry is created, when the phone opens it before the server has finished saving it.
+- Counts use `increment()` so two phones changing the same item at once add up correctly.
+- Signing out erases the browser's saved copy of the pantry, so the next person on a shared device can't find it.
+
+### Barcodes
+
+Chrome on Android has a built-in barcode reader (`BarcodeDetector`); elsewhere the app falls back to ZXing. Only grocery formats are read (EAN-13, EAN-8, UPC-A, UPC-E). A 13-digit code starting with `0` is stored as the equivalent 12-digit UPC, so both forms of the same product match one item. A torch button appears when the phone's camera supports it.
 
 ## Code layout
 
-- `src/session.tsx` — who is signed in and which pantry they belong to.
-- `src/data/store.ts` — the storage interface every screen uses.
-- `src/data/firestoreStore.ts` — the Firestore implementation. Writes aren't awaited, so the app never hangs on a bad connection.
-- `src/data/pantries.ts` — creating pantries and managing members.
-- `src/lookup/openFoodFacts.ts` — barcode → product name/brand/photo.
-- `src/scanner/BarcodeScanner.tsx` — camera + barcode reading. Uses Chrome's built-in `BarcodeDetector` on Android, falls back to ZXing elsewhere.
-- `src/screens/` — one file per screen. `src/router.ts` is a tiny hash router so the phone's Back button works.
+```
+src/
+  main.tsx, App.tsx       entry point; App switches between sign-in, setup and the app screens
+  session.tsx             who is signed in, which pantry they belong to, sign out
+  router.ts               tiny hash router, so the phone's Back button moves between screens
+  firebase.ts             Firebase app/auth/Firestore setup (and emulator wiring)
+  firebaseConfig.ts       the project's public web config
+  data/
+    types.ts              PantryItem, ProductInfo
+    store.ts              PantryStore: the storage interface every screen uses
+    firestoreStore.ts     Firestore implementation of PantryStore
+    pantry.ts             the active store + shared helpers (create item, barcode normalizing)
+    pantries.ts           creating pantries, adding/removing members
+    hooks.ts              useItems / useItem
+    backup.ts             backup file save/restore
+  lookup/openFoodFacts.ts barcode → name, brand, size, photo
+  scanner/                camera view and barcode reading
+  components/             shared pieces (amount picker, toast, screen frame, icons…)
+  screens/                one file per screen
+  styles.css              design tokens and all styles
+firestore.rules           Firestore security rules
+firebase.json, .firebaserc  Firebase CLI / emulator config
+public/                   app icons (generated from icon.svg)
+docs/USER_GUIDE.md        guide for the people using the app
+```
 
 ## Regenerating icons
 
 Edit `public/icon.svg`, then run `npm run icons`.
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| "This web address isn't allowed to sign in yet" | Add the site's domain in Firebase → Authentication → Settings → Authorized domains. |
+| "That change couldn't be saved (permission-denied)" | The person isn't a member of the pantry, or `firestore.rules` weren't published. |
+| Camera says it's blocked | Allow camera access for the site in Chrome's site settings (or the phone's app permissions). The camera only works on `https://` or `localhost`. |
+| Phone still shows the old version after a deploy | Close and reopen the app, or reload twice. |
+
+## Ideas for later
+
+Things discussed but not built yet: expiration dates, "running low" alerts before an item hits zero, a scan-to-use-up mode, and storage locations (pantry / fridge / freezer).

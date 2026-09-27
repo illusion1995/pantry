@@ -6,7 +6,7 @@ import '@fontsource/atkinson-hyperlegible-next/800.css';
 import './styles.css';
 import { App } from './App';
 
-// Ask the browser not to clear the pantry data when the phone runs low on space.
+// Ask the browser not to clear the offline copy of the pantry when the phone runs low on space.
 void navigator.storage?.persist?.();
 
 createRoot(document.getElementById('root')!).render(
