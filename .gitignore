@@ -3,3 +3,6 @@ dist
 dev-dist
 *.local
 .DS_Store
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

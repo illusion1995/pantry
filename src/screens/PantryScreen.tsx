@@ -15,7 +15,15 @@ export function PantryScreen() {
   // doesn't shift under a finger and a quick second tap can't hit the wrong item.
   const [justEmptied, setJustEmptied] = useState<ReadonlySet<string>>(new Set());
 
-  if (!items) return <Screen title="My pantry">{null}</Screen>;
+  if (!items) {
+    return (
+      <Screen title="My pantry">
+        <p className="loading" role="status">
+          Opening your pantry…
+        </p>
+      </Screen>
+    );
+  }
 
   const query = search.trim().toLocaleLowerCase();
   const shown = items

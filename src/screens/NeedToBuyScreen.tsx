@@ -10,7 +10,15 @@ export function NeedToBuyScreen() {
   const items = useItems();
   const showToast = useToast();
 
-  if (!items) return <Screen title="Need to buy">{null}</Screen>;
+  if (!items) {
+    return (
+      <Screen title="Need to buy">
+        <p className="loading" role="status">
+          Opening your list…
+        </p>
+      </Screen>
+    );
+  }
 
   const needed = items.filter((i) => i.quantity === 0).sort(byName);
 

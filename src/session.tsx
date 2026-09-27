@@ -1,6 +1,7 @@
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { onSnapshot, query, where } from 'firebase/firestore';
+import { clearIndexedDbPersistence, onSnapshot, query, terminate, where } from 'firebase/firestore';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useToast } from './components/Toast';
 import { createFirestoreStore } from './data/firestoreStore';
 import { setActiveStore } from './data/pantry';
 import { pantriesRef, userEmail, type Pantry } from './data/pantries';
@@ -23,6 +24,7 @@ export function useSessionState(): SessionState {
   const [waitingForInternet, setWaitingForInternet] = useState(false);
   const [failed, setFailed] = useState(false);
   const [openPantryId, setOpenPantryId] = useState<string | null>(null);
+  const showToast = useToast();
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -59,7 +61,10 @@ export function useSessionState(): SessionState {
   const pantryId = pantry?.id ?? null;
   useEffect(() => {
     if (!pantryId) return;
-    const store = createFirestoreStore(db, pantryId);
+    const store = createFirestoreStore(db, pantryId, (error) => {
+      const code = (error as { code?: string }).code;
+      showToast({ message: `That change couldn’t be saved${code ? ` (${code})` : ''}. Please try again.` });
+    });
     setActiveStore(store);
     setOpenPantryId(pantryId);
     return () => {
@@ -67,7 +72,7 @@ export function useSessionState(): SessionState {
       setActiveStore(null);
       setOpenPantryId(null);
     };
-  }, [pantryId]);
+  }, [pantryId, showToast]);
 
   if (user === undefined) return { status: 'loading' };
   if (user === null) return { status: 'signed-out' };
@@ -77,8 +82,13 @@ export function useSessionState(): SessionState {
   return { status: 'loading', waitingForInternet };
 }
 
-export function signOut() {
-  return firebaseSignOut(auth);
+export async function signOut() {
+  await firebaseSignOut(auth);
+  // Erase this device's saved copy of the pantry, so whoever signs in next
+  // can't find it. The database can't be used after this, so start fresh.
+  await terminate(db);
+  await clearIndexedDbPersistence(db).catch((error) => console.error('Could not clear saved data', error));
+  location.replace(location.pathname);
 }
 
 interface Session {

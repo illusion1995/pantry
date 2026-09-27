@@ -31,7 +31,11 @@ interface Listener {
  * them to the local copy immediately and sends them when it can, so buttons
  * never hang on a slow or missing connection.
  */
-export function createFirestoreStore(db: Firestore, pantryId: string): ClosableStore {
+export function createFirestoreStore(
+  db: Firestore,
+  pantryId: string,
+  onWriteError: (error: unknown) => void,
+): ClosableStore {
   const itemsRef = collection(db, 'pantries', pantryId, 'items');
   const cache = new Map<string, PantryItem>();
   const listeners = new Set<Listener>();
@@ -39,21 +43,46 @@ export function createFirestoreStore(db: Firestore, pantryId: string): ClosableS
   let markReady!: () => void;
   const ready = new Promise<void>((resolve) => (markReady = resolve));
 
-  const unsubscribe = onSnapshot(
-    itemsRef,
-    (snapshot) => {
-      cache.clear();
-      for (const d of snapshot.docs) cache.set(d.id, fromDoc(d.id, d.data()));
-      loaded = true;
-      markReady();
-      const items = all();
-      listeners.forEach((l) => l.next(items));
-    },
-    (error) => {
-      markReady();
-      listeners.forEach((l) => l.error?.(error));
-    },
-  );
+  let unsubscribe = () => {};
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let failures = 0;
+  let closed = false;
+
+  // A Firestore listener stops for good after an error, so start a new one.
+  // This matters right after a pantry is created: the phone opens it before the
+  // server has finished saving it, and the first attempt is refused.
+  function listen() {
+    unsubscribe = onSnapshot(
+      itemsRef,
+      (snapshot) => {
+        failures = 0;
+        cache.clear();
+        for (const d of snapshot.docs) cache.set(d.id, fromDoc(d.id, d.data()));
+        loaded = true;
+        markReady();
+        const items = all();
+        listeners.forEach((l) => l.next(items));
+      },
+      (error) => {
+        console.error('Could not load pantry items', error);
+        failures++;
+        // Don't let lookups run against an empty list after a single hiccup,
+        // but don't leave them waiting forever either.
+        if (failures >= 3) markReady();
+        listeners.forEach((l) => l.error?.(error));
+        if (!closed) retryTimer = setTimeout(listen, Math.min(30_000, 500 * 2 ** failures));
+      },
+    );
+  }
+  listen();
+
+  /** Writes finish in the background; the local copy already shows the change. */
+  function send(write: Promise<unknown>) {
+    write.catch((error) => {
+      console.error('A change could not be saved', error);
+      onWriteError(error);
+    });
+  }
 
   // Two phones changing the same count at the same moment can briefly push it
   // below zero; always show and reason about it as zero.
@@ -126,6 +155,8 @@ export function createFirestoreStore(db: Firestore, pantryId: string): ClosableS
     },
 
     close() {
+      closed = true;
+      clearTimeout(retryTimer);
       unsubscribe();
       listeners.clear();
     },
@@ -138,9 +169,4 @@ function fromDoc(id: string, data: DocumentData): PantryItem {
     id,
     quantity: typeof data.quantity === 'number' ? data.quantity : 0,
   };
-}
-
-/** Writes finish in the background; the local copy already shows the change. */
-function send(write: Promise<unknown>) {
-  write.catch((error) => console.error('A change could not be saved', error));
 }

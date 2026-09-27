@@ -21,6 +21,17 @@ npm run build     # type-check + production build into dist/
 npm run preview   # serve the production build locally
 ```
 
+### Testing against local Firebase emulators
+
+The emulators use `firestore.rules` and fake accounts, so nothing touches the real project. They need Java 21+.
+
+```bash
+npm run emulators        # terminal 1: Auth on :9099, Firestore on :8085
+npm run dev:emulators    # terminal 2: the app, wired to the emulators
+```
+
+In the browser console, `await emulatorSignIn('someone@example.test')` signs in as a fake Google account.
+
 ## Firebase setup (one time)
 
 1. Create a Firebase project.
