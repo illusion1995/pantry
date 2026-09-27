@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Who can read and change what.
+// A pantry lists the Google emails of the people who share it (memberEmails).
+// Only those people can see or change the pantry and its items.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isMember(pantryId) {
+      return signedIn()
+        && myEmail() in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberEmails;
+    }
+
+    function validMembers(members) {
+      return members is list && members.size() >= 1 && members.size() <= 20;
+    }
+
+    match /pantries/{pantryId} {
+      allow read: if signedIn() && myEmail() in resource.data.memberEmails;
+
+      // Anyone signed in can start their own pantry, with only themselves in it.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'memberEmails', 'createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberEmails == [myEmail()]
+        && request.resource.data.name is string
+        && request.resource.data.createdAt is number;
+
+      // Members can add or remove people. Nothing else about the pantry changes.
+      allow update: if signedIn()
+        && myEmail() in resource.data.memberEmails
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberEmails', 'name'])
+        && validMembers(request.resource.data.memberEmails);
+
+      allow delete: if false;
+
+      match /items/{itemId} {
+        function validItem() {
+          let d = request.resource.data;
+          return d.name is string
+            && d.name.size() > 0
+            && d.name.size() <= 200
+            && d.quantity is int;
+        }
+
+        allow read, delete: if isMember(pantryId);
+        allow create, update: if isMember(pantryId) && validItem();
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#ffd83d"/>
+  <!-- Jar -->
+  <rect x="166" y="92" width="180" height="46" rx="12" fill="#14213d"/>
+  <path d="M150 158h212c14 0 26 12 26 26v214c0 22-18 40-40 40H164c-22 0-40-18-40-40V184c0-14 12-26 26-26z" fill="#14213d"/>
+  <!-- Label with barcode -->
+  <rect x="162" y="240" width="188" height="120" rx="10" fill="#ffffff"/>
+  <g fill="#14213d">
+    <rect x="184" y="262" width="10" height="76"/>
+    <rect x="202" y="262" width="5" height="76"/>
+    <rect x="215" y="262" width="14" height="76"/>
+    <rect x="237" y="262" width="5" height="76"/>
+    <rect x="250" y="262" width="10" height="76"/>
+    <rect x="268" y="262" width="5" height="76"/>
+    <rect x="281" y="262" width="14" height="76"/>
+    <rect x="303" y="262" width="5" height="76"/>
+    <rect x="316" y="262" width="10" height="76"/>
+  </g>
+</svg>
