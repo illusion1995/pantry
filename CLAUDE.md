@@ -30,6 +30,7 @@ There is no unit test suite. Verify changes by running the app (mobile viewport,
 - A Firestore `onSnapshot` listener is dead after its error callback fires; anything long-lived must re-subscribe (see the retry in `firestoreStore.ts`).
 - Quantities are whole numbers; 0 means "Need to buy". Use `adjustQuantity` (which uses `increment()`) for ±, so changes from two phones add up.
 - Store barcodes through `normalizeBarcode` so UPC-A and EAN-13 forms match.
+- Product lookup (`src/lookup/`) only runs for barcodes not already in the pantry, so it must never be used to rewrite saved items; the user may have renamed them. Any new lookup source has to allow browser requests (CORS) and need no secret key, because this is a public static site.
 - Emails in `memberEmails` are always lowercase (`normalizeEmail`); the rules compare against `request.auth.token.email.lower()`.
 - New item fields must stay compatible with `validItem()` in `firestore.rules` (string `name` 1–200 chars, integer `quantity`).
 - Routing is hash-based (`src/router.ts`) so it works under the `/pantry/` subpath on GitHub Pages and the phone's Back button works. Vite `base` is `./` for the same reason.

@@ -1,0 +1,128 @@
+import type { ProductInfo } from '../data/types';
+import { translateToEnglish } from './translate';
+
+/**
+ * Free, public product databases from the Open Food Facts project. They share
+ * one API and all allow requests straight from a web page. Earlier entries win
+ * when more than one knows a barcode.
+ */
+const SOURCES = [
+  'world.openfoodfacts.org', // groceries
+  'world.openproductsfacts.org', // household items: paper towels, cleaners…
+  'world.openbeautyfacts.org', // toiletries
+  'world.openpetfoodfacts.org', // pet food
+];
+
+const FIELDS = [
+  'lang',
+  'product_name',
+  'product_name_en',
+  'generic_name',
+  'generic_name_en',
+  'brands',
+  'quantity',
+  'image_front_small_url',
+].join(',');
+
+export type LookupResult =
+  | {
+      kind: 'found';
+      product: ProductInfo;
+      /** Set when the name was machine-translated because no English name exists. */
+      translatedFrom?: { language: string; original: string };
+    }
+  | { kind: 'not-found' }
+  | { kind: 'offline' };
+
+type SourceResult =
+  | { kind: 'found'; product: ProductInfo; english: boolean; language?: string }
+  | { kind: 'not-found' }
+  | { kind: 'error' };
+
+interface OffProduct {
+  lang?: string;
+  product_name?: string;
+  product_name_en?: string;
+  generic_name?: string;
+  generic_name_en?: string;
+  brands?: string;
+  quantity?: string;
+  image_front_small_url?: string;
+}
+
+/**
+ * Looks a barcode up in every source at once and prefers an English name.
+ * If the product only has a name in another language (common for bilingual
+ * Canadian packaging), that name is translated. Never throws.
+ */
+export async function lookupBarcode(barcode: string): Promise<LookupResult> {
+  if (!navigator.onLine) return { kind: 'offline' };
+
+  const results = await Promise.all(SOURCES.map((host) => lookupIn(host, barcode)));
+  const found = results.filter((r) => r.kind === 'found');
+  if (found.length === 0) {
+    return results.every((r) => r.kind === 'error') ? { kind: 'offline' } : { kind: 'not-found' };
+  }
+
+  const english = found.find((r) => r.english);
+  if (english) return { kind: 'found', product: english.product };
+
+  const best = found[0];
+  const translated = best.language ? await translateToEnglish(best.product.name, best.language) : null;
+  if (!translated || !best.language) return { kind: 'found', product: best.product };
+  return {
+    kind: 'found',
+    product: { ...best.product, name: translated },
+    translatedFrom: { language: best.language, original: best.product.name },
+  };
+}
+
+async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
+  let response: Response;
+  try {
+    response = await fetch(`https://${host}/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    return { kind: 'error' };
+  }
+  if (response.status === 404) return { kind: 'not-found' };
+  if (!response.ok) return { kind: 'error' };
+
+  let data: { status?: number; product?: OffProduct };
+  try {
+    data = await response.json();
+  } catch {
+    return { kind: 'error' };
+  }
+  const p = data.product;
+  if (data.status !== 1 || !p) return { kind: 'not-found' };
+
+  const language = clean(p.lang)?.toLowerCase();
+  // An English name, if the database has one. generic_name_en is a plain
+  // description ("Butter biscuits"), still better than a name she can't read.
+  const englishName =
+    clean(p.product_name_en) ??
+    (language === 'en' ? (clean(p.product_name) ?? clean(p.generic_name)) : undefined) ??
+    clean(p.generic_name_en);
+  const name = englishName ?? clean(p.product_name) ?? clean(p.generic_name);
+  if (!name) return { kind: 'not-found' };
+
+  return {
+    kind: 'found',
+    english: Boolean(englishName),
+    language,
+    product: {
+      barcode,
+      name,
+      brand: clean(p.brands?.split(',')[0]),
+      size: clean(p.quantity),
+      imageUrl: clean(p.image_front_small_url),
+    },
+  };
+}
+
+function clean(value: string | undefined): string | undefined {
+  const text = value?.replace(/\s+/g, ' ').trim();
+  return text || undefined;
+}

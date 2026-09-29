@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { createItem, describe, store } from '../data/pantry';
 import type { PantryItem, ProductInfo } from '../data/types';
 import { ItemThumb } from './ItemThumb';
@@ -14,7 +14,7 @@ interface Props {
   target: Target;
   question?: string;
   /** Shown above the form, e.g. to explain why the name needs typing. */
-  note?: string;
+  note?: ReactNode;
   onAdded: (item: PantryItem, added: number) => void;
 }
 
@@ -56,7 +56,7 @@ export function AmountStep({ target, question = 'How many are you adding?', note
 
   return (
     <form className="stack" onSubmit={submit} noValidate>
-      {note && <p className="note">{note}</p>}
+      {note && <div className="note">{note}</div>}
 
       {target.kind === 'existing' ? (
         <div className="product">

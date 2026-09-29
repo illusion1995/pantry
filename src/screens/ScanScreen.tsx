@@ -4,16 +4,23 @@ import { DoneStep } from '../components/DoneStep';
 import { Screen } from '../components/Screen';
 import { normalizeBarcode, store } from '../data/pantry';
 import type { PantryItem, ProductInfo } from '../data/types';
-import { lookupBarcode } from '../lookup/openFoodFacts';
+import { lookupBarcode } from '../lookup/productLookup';
+import { languageName } from '../lookup/translate';
 import { back, goInstead } from '../router';
 import { BarcodeScanner } from '../scanner/BarcodeScanner';
+
+/** Why the product step needs a word of explanation, if it does. */
+type Notice =
+  | { kind: 'translated'; language: string; original: string }
+  | { kind: 'not-found'; barcode: string }
+  | { kind: 'offline' };
 
 type Step =
   | { step: 'camera' }
   | { step: 'type-code' }
   | { step: 'looking-up'; barcode: string }
   | { step: 'amount'; existing: PantryItem }
-  | { step: 'amount'; product: ProductInfo; note?: string }
+  | { step: 'amount'; product: ProductInfo; notice?: Notice }
   | { step: 'done'; item: PantryItem; added: number };
 
 export function ScanScreen() {
@@ -36,15 +43,13 @@ export function ScanScreen() {
     const result = await lookupBarcode(barcode);
     if (id !== scanId.current) return;
     if (result.kind === 'found') {
-      setState({ step: 'amount', product: result.product });
+      const notice = result.translatedFrom && ({ kind: 'translated', ...result.translatedFrom } as const);
+      setState({ step: 'amount', product: result.product, notice });
     } else {
       setState({
         step: 'amount',
         product: { barcode, name: '' },
-        note:
-          result.kind === 'offline'
-            ? 'There’s no internet right now, so the name can’t be looked up. Type what it is.'
-            : 'This barcode isn’t in the product list. Type what it is. The app will remember it next time.',
+        notice: result.kind === 'offline' ? { kind: 'offline' } : { kind: 'not-found', barcode },
       });
     }
   }
@@ -81,7 +86,7 @@ export function ScanScreen() {
       {state.step === 'amount' && (
         <AmountStep
           target={'existing' in state ? { kind: 'existing', item: state.existing } : { kind: 'new', product: state.product }}
-          note={'note' in state ? state.note : undefined}
+          note={'notice' in state && state.notice ? <NoticeText notice={state.notice} /> : undefined}
           onAdded={(item, added) => setState({ step: 'done', item, added })}
         />
       )}
@@ -91,6 +96,33 @@ export function ScanScreen() {
       )}
     </Screen>
   );
+}
+
+function NoticeText({ notice }: { notice: Notice }) {
+  switch (notice.kind) {
+    case 'translated':
+      return (
+        <p>
+          Translated from {languageName(notice.language)}. The package says “{notice.original}”.
+        </p>
+      );
+    case 'offline':
+      return <p>There’s no internet right now, so the name can’t be looked up. Type what it is.</p>;
+    case 'not-found':
+      return (
+        <>
+          <p>This barcode isn’t in the product lists. Type what it is. The app will remember it next time.</p>
+          <a
+            className="link-btn"
+            href={`https://www.google.com/search?q=${encodeURIComponent(notice.barcode)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Search the web for this barcode
+          </a>
+        </>
+      );
+  }
 }
 
 function TypeBarcode({ onSubmit }: { onSubmit: (code: string) => void }) {

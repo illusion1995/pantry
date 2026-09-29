@@ -9,13 +9,13 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 - **Using the app:** see the [User guide](docs/USER_GUIDE.md), written for the people who use it every day.
 - **Hosting:** GitHub Pages, deployed automatically by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main`.
 - **Data and sign-in:** Firebase (Cloud Firestore + Google sign-in), free Spark plan. Config is in [`src/firebaseConfig.ts`](src/firebaseConfig.ts); access rules are in [`firestore.rules`](firestore.rules).
-- **Product names and photos:** [Open Food Facts](https://world.openfoodfacts.org), a free public product database.
+- **Product names and photos:** free public databases from the Open Food Facts project: [Open Food Facts](https://world.openfoodfacts.org), [Open Products Facts](https://world.openproductsfacts.org), [Open Beauty Facts](https://world.openbeautyfacts.org) and [Open Pet Food Facts](https://world.openpetfoodfacts.org). Names with no English version are translated with [MyMemory](https://mymemory.translated.net). None of these need an account or key.
 
 ## Features
 
 | Screen | What it does |
 | --- | --- |
-| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. Unknown barcodes ask for a name once and are remembered. |
+| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) names are translated, with the original shown. Unknown barcodes offer a web search and ask for a name once; it's remembered. |
 | My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
 | Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
@@ -99,6 +99,17 @@ The Firebase web config in `src/firebaseConfig.ts` is not a secret; it only iden
 
 Chrome on Android has a built-in barcode reader (`BarcodeDetector`); elsewhere the app falls back to ZXing. Only grocery formats are read (EAN-13, EAN-8, UPC-A, UPC-E). A 13-digit code starting with `0` is stored as the equivalent 12-digit UPC, so both forms of the same product match one item. A torch button appears when the phone's camera supports it.
 
+### Product lookup
+
+A barcode is only looked up the **first** time it's scanned. After that the app uses the saved item, including any name the user changed, so lookup changes never alter existing pantry items.
+
+1. All four Open Facts databases are asked at once (`src/lookup/productLookup.ts`). They share one API and allow requests straight from the browser (CORS).
+2. An English name wins: `product_name_en`, then `product_name` if the product's main language is English, then `generic_name_en`. Earlier databases in the list win ties.
+3. If a product only has a name in another language (common for bilingual Canadian packaging), it's machine-translated with MyMemory (`src/lookup/translate.ts`), and the screen shows the original. MyMemory also returns stored human translations of *similar* phrases, which can add words that aren't on the package, so only exact human matches (≥ 0.95) or the machine translation are used. The free tier allows about 5,000 characters a day; if it's unavailable, the original name is kept.
+4. If nothing is found, the user types the name, with a **Search the web for this barcode** link (Google, new tab) to help.
+
+Other databases were considered: UPCitemdb has good English names but blocks browser requests (it would need a small proxy such as a Cloudflare Worker); the USDA database didn't find common products by barcode; paid services weren't worth it.
+
 ## Code layout
 
 ```
@@ -116,7 +127,8 @@ src/
     pantries.ts           creating pantries, adding/removing members
     hooks.ts              useItems / useItem
     backup.ts             backup file save/restore
-  lookup/openFoodFacts.ts barcode → name, brand, size, photo
+  lookup/productLookup.ts barcode → name, brand, size, photo (Open Facts databases)
+  lookup/translate.ts     translate non-English product names to English
   scanner/                camera view and barcode reading
   components/             shared pieces (amount picker, toast, screen frame, icons…)
   screens/                one file per screen

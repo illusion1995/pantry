@@ -41,8 +41,9 @@ The phone's **Back** button, or the **‹ Back** button at the top of each scree
 **Tips**
 
 - **In a dark pantry:** tap **Turn on the light** to use the phone's flashlight. The button only appears if the phone's camera has one.
-- **Scanning something you already have:** it adds to the count. It won't make a second copy.
-- **"This barcode isn't in the product list":** type what it is, once. Next time you scan it, the app remembers.
+- **Scanning something you already have:** it adds to the count. It won't make a second copy, and it keeps the name you gave it.
+- **"Translated from French":** the product only had a French name, so the app translated it. The original name from the package is shown above it. If the translation reads oddly, tap **Change the name**.
+- **"This barcode isn't in the product lists":** type what it is, once. Next time you scan it, the app remembers. Not sure what it is? Tap **Search the web for this barcode**, look, then come back to the app.
 - **If the camera won't read a barcode:** tap **Type the barcode numbers instead** and type the numbers printed under the lines.
 
 ---
