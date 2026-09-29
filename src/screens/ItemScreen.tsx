@@ -2,9 +2,10 @@ import { useEffect, useId, useState, type FormEvent } from 'react';
 import { PhotoControl } from '../components/PhotoControl';
 import { QuantityPicker } from '../components/QuantityPicker';
 import { Screen } from '../components/Screen';
+import { SectionPicker } from '../components/SectionChoice';
 import { useToast } from '../components/Toast';
 import { useItem } from '../data/hooks';
-import { describe, store } from '../data/pantry';
+import { describe, sectionOf, store } from '../data/pantry';
 import type { PantryItem } from '../data/types';
 import { back } from '../router';
 
@@ -30,6 +31,7 @@ function EditItem({ item }: { item: PantryItem }) {
   const [quantity, setQuantity] = useState(item.quantity);
   // The user's own photo; saved with the other changes.
   const [photo, setPhoto] = useState(item.photo);
+  const [section, setSection] = useState(sectionOf(item));
   const [error, setError] = useState('');
 
   // Keep the count in step if it changes elsewhere while this screen is open.
@@ -44,6 +46,7 @@ function EditItem({ item }: { item: PantryItem }) {
     await store.update(item.id, {
       name: name.trim(),
       quantity,
+      section,
       ...(photo !== item.photo ? { photo: photo ?? null } : {}),
     });
     showToast({ message: 'Changes saved.' });
@@ -84,6 +87,8 @@ function EditItem({ item }: { item: PantryItem }) {
       </div>
 
       <QuantityPicker label="How many do you have?" value={quantity} onChange={setQuantity} min={0} />
+
+      <SectionPicker value={section} onChange={setSection} />
 
       {error && (
         <p className="error" role="alert">

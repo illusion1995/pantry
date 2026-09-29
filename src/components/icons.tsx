@@ -97,6 +97,21 @@ export const PhotosIcon = () => (
   </Icon>
 );
 
+export const FoodIcon = () => (
+  <Icon>
+    <path d="M6 3v6a2 2 0 0 0 4 0V3M8 3v18" />
+    <path d="M18 21V3c-2.2 1.6-3.5 4.6-3.5 8.5H18" />
+  </Icon>
+);
+
+export const HouseholdIcon = () => (
+  <Icon>
+    <path d="M7 10h6a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z" />
+    <path d="M8 10V7h5v3M8 7l1-3h5l2 3h-3" />
+    <path d="M19 4h.01M21 6.5h.01M21 1.5h.01" />
+  </Icon>
+);
+
 export const PencilIcon = () => (
   <Icon>
     <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" />

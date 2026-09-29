@@ -1,5 +1,5 @@
 import type { PantryStore } from './store';
-import type { PantryItem, ProductInfo } from './types';
+import type { PantryItem, ProductInfo, Section } from './types';
 
 let active: PantryStore | null = null;
 
@@ -52,6 +52,7 @@ export async function createItem(product: ProductInfo, quantity: number): Promis
   const now = Date.now();
   const item: PantryItem = {
     id: crypto.randomUUID(),
+    section: product.section ?? 'food',
     barcode: product.barcode,
     name: product.name.trim(),
     brand: product.brand?.trim() || undefined,
@@ -74,6 +75,14 @@ export function byName(a: PantryItem, b: PantryItem): number {
 export function pictureOf(item: Pick<PantryItem, 'photo' | 'imageUrl'>): string | undefined {
   return item.photo ?? item.imageUrl;
 }
+
+/** Items saved before sections existed have none; they're food. */
+export function sectionOf(item: Pick<PantryItem, 'section'>): Section {
+  return item.section ?? 'food';
+}
+
+export const SECTION_NAMES: Record<Section, string> = { food: 'Food', household: 'Household' };
+export const SECTIONS: Section[] = ['food', 'household'];
 
 export function describe(item: Pick<PantryItem, 'brand' | 'size'>): string {
   return [item.brand, item.size].filter(Boolean).join(', ');

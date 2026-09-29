@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { createItem, describe, store } from '../data/pantry';
 import type { PantryItem, ProductInfo } from '../data/types';
 import { PhotoControl } from './PhotoControl';
+import { SectionPicker } from './SectionChoice';
 import { QuantityPicker } from './QuantityPicker';
 
 type Target =
@@ -41,12 +42,19 @@ export function AmountStep({ target, question = 'How many are you adding?', note
       onChange={(next) => setPhoto(next ?? undefined)}
     />
   );
+  // Only ask Food or Household when no product database told us.
+  const askSection = target.kind === 'new' && !target.product.section;
+  const [section, setSection] = useState(target.kind === 'new' ? target.product.section : undefined);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
     if (!name.trim()) {
       setError('Type a name for this item.');
+      return;
+    }
+    if (askSection && !section) {
+      setError('Choose Food or Household.');
       return;
     }
     setSaving(true);
@@ -56,7 +64,7 @@ export function AmountStep({ target, question = 'How many are you adding?', note
         if (photoChanged) await store.update(target.item.id, { photo: photo ?? null });
         onAdded({ ...target.item, quantity, photo }, amount);
       } else {
-        const item = await createItem({ ...target.product, name, photo }, amount);
+        const item = await createItem({ ...target.product, name, photo, section }, amount);
         onAdded(item, amount);
       }
     } catch (e) {
@@ -120,6 +128,17 @@ export function AmountStep({ target, question = 'How many are you adding?', note
       )}
 
       {target.kind === 'new' && editingName && photoControl}
+
+      {askSection && (
+        <SectionPicker
+          value={section}
+          onChange={(next) => {
+            setSection(next);
+            setError('');
+          }}
+          invalid={Boolean(error) && !section}
+        />
+      )}
 
       <QuantityPicker label={question} value={amount} onChange={setAmount} />
 

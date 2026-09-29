@@ -2,10 +2,22 @@ import { useState } from 'react';
 import { ItemPicture } from '../components/ItemPicture';
 import { MinusIcon, PlusIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
+import { SectionTabs } from '../components/SectionChoice';
 import { useToast } from '../components/Toast';
 import { useItems } from '../data/hooks';
-import { byName, describe, store } from '../data/pantry';
-import type { PantryItem } from '../data/types';
+import { byName, describe, SECTION_NAMES, sectionOf, store } from '../data/pantry';
+import type { PantryItem, Section } from '../data/types';
+
+// The tab she used last, remembered on this phone.
+const TAB_KEY = 'pantry:tab';
+
+function savedTab(): Section {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'household' ? 'household' : 'food';
+  } catch {
+    return 'food';
+  }
+}
 
 export function PantryScreen() {
   const items = useItems();
@@ -14,6 +26,16 @@ export function PantryScreen() {
   // Items used up while this screen is open stay in place (showing 0), so the list
   // doesn't shift under a finger and a quick second tap can't hit the wrong item.
   const [justEmptied, setJustEmptied] = useState<ReadonlySet<string>>(new Set());
+  const [tab, setTab] = useState<Section>(savedTab);
+
+  function chooseTab(next: Section) {
+    setTab(next);
+    try {
+      localStorage.setItem(TAB_KEY, next);
+    } catch {
+      // Not remembering the tab is fine.
+    }
+  }
 
   if (!items) {
     return (
@@ -26,11 +48,15 @@ export function PantryScreen() {
   }
 
   const query = search.trim().toLocaleLowerCase();
-  const shown = items
-    .filter((i) => i.quantity > 0 || justEmptied.has(i.id))
-    .filter((i) => !query || i.name.toLocaleLowerCase().includes(query) || i.brand?.toLocaleLowerCase().includes(query))
-    .sort(byName);
-  const anyInStock = items.some((i) => i.quantity > 0 || justEmptied.has(i.id));
+  const onShelf = items.filter((i) => i.quantity > 0 || justEmptied.has(i.id));
+  const matching = onShelf.filter(
+    (i) => !query || i.name.toLocaleLowerCase().includes(query) || i.brand?.toLocaleLowerCase().includes(query),
+  );
+  const shown = matching.filter((i) => sectionOf(i) === tab).sort(byName);
+  const anyInTab = onShelf.some((i) => sectionOf(i) === tab);
+  // Searching on the wrong tab shouldn't look like "you don't have it".
+  const otherTab: Section = tab === 'food' ? 'household' : 'food';
+  const matchesInOtherTab = query ? matching.filter((i) => sectionOf(i) === otherTab).length : 0;
 
   async function usedOne(item: PantryItem) {
     const quantity = await store.adjustQuantity(item.id, -1);
@@ -46,9 +72,15 @@ export function PantryScreen() {
 
   return (
     <Screen title="My pantry">
-      {!anyInStock ? (
+      <SectionTabs value={tab} onChange={chooseTab} />
+
+      {!anyInTab ? (
         <div className="empty">
-          <p>Your pantry is empty. Scan an item to add it.</p>
+          <p>
+            {tab === 'food'
+              ? 'Nothing in Food yet. Scan an item to add it.'
+              : 'Nothing in Household yet. Cleaning supplies, toiletries and pet food go here.'}
+          </p>
           <a className="btn btn--primary" href="#/scan">
             Scan item
           </a>
@@ -67,7 +99,14 @@ export function PantryScreen() {
 
           {shown.length === 0 ? (
             <div className="empty">
-              <p>Nothing in your pantry matches “{search.trim()}”.</p>
+              <p>
+                Nothing in {SECTION_NAMES[tab]} matches “{search.trim()}”.
+              </p>
+              {matchesInOtherTab > 0 && (
+                <button type="button" className="btn btn--primary" onClick={() => chooseTab(otherTab)}>
+                  Look in {SECTION_NAMES[otherTab]} ({matchesInOtherTab})
+                </button>
+              )}
               <button type="button" className="btn btn--outline" onClick={() => setSearch('')}>
                 Clear search
               </button>

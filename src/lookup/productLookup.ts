@@ -1,16 +1,16 @@
-import type { ProductInfo } from '../data/types';
+import type { ProductInfo, Section } from '../data/types';
 import { translateToEnglish } from './translate';
 
 /**
  * Free, public product databases from the Open Food Facts project. They share
  * one API and all allow requests straight from a web page. Earlier entries win
- * when more than one knows a barcode.
+ * when more than one knows a barcode. Which one knows it also tells us the tab.
  */
-const SOURCES = [
-  'world.openfoodfacts.org', // groceries
-  'world.openproductsfacts.org', // household items: paper towels, cleaners…
-  'world.openbeautyfacts.org', // toiletries
-  'world.openpetfoodfacts.org', // pet food
+const SOURCES: { host: string; section: Section }[] = [
+  { host: 'world.openfoodfacts.org', section: 'food' }, // groceries
+  { host: 'world.openproductsfacts.org', section: 'household' }, // paper towels, cleaners…
+  { host: 'world.openbeautyfacts.org', section: 'household' }, // toiletries
+  { host: 'world.openpetfoodfacts.org', section: 'household' }, // pet food
 ];
 
 const FIELDS = [
@@ -66,7 +66,7 @@ interface OffProduct {
 export async function lookupBarcode(barcode: string): Promise<LookupResult> {
   if (!navigator.onLine) return { kind: 'offline' };
 
-  const results = await Promise.all(SOURCES.map((host) => lookupIn(host, barcode)));
+  const results = await Promise.all(SOURCES.map((source) => lookupIn(source, barcode)));
   const found = results.filter((r) => r.kind === 'found');
   if (found.length === 0) {
     return results.every((r) => r.kind === 'error') ? { kind: 'offline' } : { kind: 'not-found' };
@@ -109,10 +109,10 @@ function withoutPackageSize(name: string): string {
   return stripped || name;
 }
 
-async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
+async function lookupIn(source: (typeof SOURCES)[number], barcode: string): Promise<SourceResult> {
   let response: Response;
   try {
-    response = await fetch(`https://${host}/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`, {
+    response = await fetch(`https://${source.host}/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`, {
       signal: AbortSignal.timeout(8000),
     });
   } catch {
@@ -146,6 +146,7 @@ async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
     language,
     category: englishCategory(p.categories_hierarchy),
     product: {
+      section: isNonFood(p.categories_hierarchy) ? 'household' : source.section,
       barcode,
       name,
       brand: clean(p.brands?.split(',')[0]),
@@ -153,6 +154,11 @@ async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
       imageUrl: clean(p.image_front_small_url),
     },
   };
+}
+
+/** The food database also lists some pet food and non-food items; those belong in Household. */
+function isNonFood(hierarchy: string[] | undefined): boolean {
+  return (hierarchy ?? []).some((tag) => tag === 'en:non-food-products' || tag.endsWith('pet-food'));
 }
 
 function clean(value: string | undefined): string | undefined {

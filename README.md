@@ -16,11 +16,11 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 | Screen | What it does |
 | --- | --- |
 | Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) products get an English name (their English category, or a translation), with the original shown. Unknown barcodes ask for a name once; it's remembered. |
-| My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
-| Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
+| My pantry | Everything in stock, split into **Food** and **Household** tabs (Household = cleaning supplies, toiletries, pet food), with search and big −/+ buttons. The last tab used is remembered. Searching on the wrong tab offers "Look in Food/Household". Using the last one moves it to Need to buy (with Undo). |
+| Need to buy | Everything at zero, filled in automatically, in Food and Household sections. **Share list** sends it by text/email via the phone's share menu (grouped the same way). **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
 | Photos | Tap a picture to see it bigger. The yellow pen badge on a picture (or the empty "Add photo" box) offers **Take a photo** or **Choose from my photos**, both while adding an item and on Change item. Her own photo always wins over the database picture; removing it brings the database picture back. |
-| Change item | Tap an item's name to rename it, fix its count, change its photo, or delete it. |
+| Change item | Tap an item's name to rename it, fix its count, change its photo, move it between Food and Household, or delete it. |
 | Share this pantry | Add or remove family members by Google email. Sign out. |
 | Back up | Saves the pantry to a JSON file and restores from one. |
 
@@ -79,7 +79,12 @@ pantries/{pantryId}/items/{itemId}
   id, name, quantity (int), createdAt, updatedAt
   barcode?, brand?, size?, imageUrl?   // missing for items added by name
   photo?                               // the user's own photo, a small WebP/JPEG data URL
+  section?                             // "food" | "household"; missing = food (items saved before tabs existed)
 ```
+
+### Food and Household
+
+Each item has a `section`. When a scanned product is found, the database it came from decides: Open Food Facts → Food; Open Products, Beauty and Pet Food Facts → Household. Food-database products categorized as pet food or non-food also go to Household. When nothing is found (or the item is added by name), the app asks "Where does it go?" and won't add the item until one is chosen. Items can be moved on Change item.
 
 ### Photos
 
@@ -119,7 +124,7 @@ A barcode is only looked up the **first** time it's scanned. After that the app 
    - Chrome's built-in on-device Translator API would be better, but it only works on desktop, not phones.
 4. If nothing is found, the user types the name. (A "search the web for this barcode" link was tried and removed as one step too many.)
 
-Other databases were considered: UPCitemdb has good English names but blocks browser requests (it would need a small proxy such as a Cloudflare Worker); the USDA database didn't find common products by barcode; paid services weren't worth it.
+Other databases were considered: UPCitemdb has good English names and North American household products (it has CLR, which none of the Open Facts databases do) but blocks browser requests, so it would need a small proxy such as a Cloudflare Worker; UPC Database needs an account key and also blocks browser requests; brocade.io no longer responds; the USDA database didn't find common products by barcode; paid services weren't worth it.
 
 ## Code layout
 

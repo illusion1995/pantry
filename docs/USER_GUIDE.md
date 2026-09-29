@@ -71,6 +71,23 @@ For fruit and vegetables, bulk bins, or home-canned food:
 
 ---
 
+## Food and Household
+
+Your things are kept in two groups:
+
+- **Food:** everything you eat and drink.
+- **Household:** cleaning supplies (like CLR and dish soap), paper towels, toiletries and pet food.
+
+When you scan something, the app usually knows which group it belongs to. If it doesn't, it asks **Where does it go?**. Tap **Food** or **Household**, then **Add to pantry**.
+
+In **My pantry**, tap **Food** or **Household** at the top to switch between them. The app remembers which one you looked at last. If you search on one tab and the item is on the other, tap **Look in Food** or **Look in Household**.
+
+**Something in the wrong group?** Tap its name, then tap **Food** or **Household** under **Where does it go?**, then **Save changes**. Everything you added before this was set up is under **Food**, so move any cleaning supplies over this way.
+
+**Need to buy** is still one list, with a Food part and a Household part, so one shopping trip covers both.
+
+---
+
 ## When you use something
 
 1. Tap **My pantry**.
