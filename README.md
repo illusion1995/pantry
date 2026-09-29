@@ -15,7 +15,7 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 
 | Screen | What it does |
 | --- | --- |
-| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) names are translated, with the original shown. Unknown barcodes offer a web search and ask for a name once; it's remembered. |
+| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) names are translated, with the original shown. Unknown barcodes ask for a name once; it's remembered. |
 | My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
 | Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
@@ -106,7 +106,7 @@ A barcode is only looked up the **first** time it's scanned. After that the app 
 1. All four Open Facts databases are asked at once (`src/lookup/productLookup.ts`). They share one API and allow requests straight from the browser (CORS).
 2. An English name wins: `product_name_en`, then `product_name` if the product's main language is English, then `generic_name_en`. Earlier databases in the list win ties.
 3. If a product only has a name in another language (common for bilingual Canadian packaging), it's machine-translated with MyMemory (`src/lookup/translate.ts`), and the screen shows the original. MyMemory also returns stored human translations of *similar* phrases, which can add words that aren't on the package, so only exact human matches (≥ 0.95) or the machine translation are used. The free tier allows about 5,000 characters a day; if it's unavailable, the original name is kept.
-4. If nothing is found, the user types the name, with a **Search the web for this barcode** link (Google, new tab) to help.
+4. If nothing is found, the user types the name. (A "search the web for this barcode" link was tried and removed as one step too many.)
 
 Other databases were considered: UPCitemdb has good English names but blocks browser requests (it would need a small proxy such as a Cloudflare Worker); the USDA database didn't find common products by barcode; paid services weren't worth it.
 

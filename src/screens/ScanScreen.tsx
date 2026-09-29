@@ -12,7 +12,7 @@ import { BarcodeScanner } from '../scanner/BarcodeScanner';
 /** Why the product step needs a word of explanation, if it does. */
 type Notice =
   | { kind: 'translated'; language: string; original: string }
-  | { kind: 'not-found'; barcode: string }
+  | { kind: 'not-found' }
   | { kind: 'offline' };
 
 type Step =
@@ -49,7 +49,7 @@ export function ScanScreen() {
       setState({
         step: 'amount',
         product: { barcode, name: '' },
-        notice: result.kind === 'offline' ? { kind: 'offline' } : { kind: 'not-found', barcode },
+        notice: { kind: result.kind },
       });
     }
   }
@@ -109,19 +109,7 @@ function NoticeText({ notice }: { notice: Notice }) {
     case 'offline':
       return <p>There’s no internet right now, so the name can’t be looked up. Type what it is.</p>;
     case 'not-found':
-      return (
-        <>
-          <p>This barcode isn’t in the product lists. Type what it is. The app will remember it next time.</p>
-          <a
-            className="link-btn"
-            href={`https://www.google.com/search?q=${encodeURIComponent(notice.barcode)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Search the web for this barcode
-          </a>
-        </>
-      );
+      return <p>This barcode isn’t in the product lists. Type what it is. The app will remember it next time.</p>;
   }
 }
 
