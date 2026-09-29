@@ -11,7 +11,7 @@ import { BarcodeScanner } from '../scanner/BarcodeScanner';
 
 /** Why the product step needs a word of explanation, if it does. */
 type Notice =
-  | { kind: 'translated'; language: string; original: string }
+  | { kind: 'translated'; language?: string; original: string }
   | { kind: 'not-found' }
   | { kind: 'offline' };
 
@@ -103,7 +103,7 @@ function NoticeText({ notice }: { notice: Notice }) {
     case 'translated':
       return (
         <p>
-          Translated from {languageName(notice.language)}. The package says “{notice.original}”.
+          The package name is in {notice.language ? languageName(notice.language) : 'another language'}: “{notice.original}”.
         </p>
       );
     case 'offline':

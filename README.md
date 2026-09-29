@@ -15,7 +15,7 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 
 | Screen | What it does |
 | --- | --- |
-| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) names are translated, with the original shown. Unknown barcodes ask for a name once; it's remembered. |
+| Scan item | Camera barcode scan → looks the product up → asks how many → adds to the pantry. Scanning something already in the pantry adds to its count. French-only (or other non-English) products get an English name (their English category, or a translation), with the original shown. Unknown barcodes ask for a name once; it's remembered. |
 | My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
 | Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
@@ -113,7 +113,10 @@ A barcode is only looked up the **first** time it's scanned. After that the app 
 
 1. All four Open Facts databases are asked at once (`src/lookup/productLookup.ts`). They share one API and allow requests straight from the browser (CORS).
 2. An English name wins: `product_name_en`, then `product_name` if the product's main language is English, then `generic_name_en`. Earlier databases in the list win ties.
-3. If a product only has a name in another language (common for bilingual Canadian packaging), it's machine-translated with MyMemory (`src/lookup/translate.ts`), and the screen shows the original. MyMemory also returns stored human translations of *similar* phrases, which can add words that aren't on the package, so only exact human matches (≥ 0.95) or the machine translation are used. The free tier allows about 5,000 characters a day; if it's unavailable, the original name is kept.
+3. If a product only has a name in another language (common for bilingual Canadian packaging), the screen shows the original and the app picks an English name:
+   - **Its English category**, when the product is categorized at least three levels deep: `en:plain-butter-shortbreads` → "Plain butter shortbreads". Open Food Facts' category taxonomy is always English and accurate, while machine translation mangles brand-style names ("Palets Bretons" → "Breton pallets", "Dessert Noir" → "Dessert Black").
+   - **Otherwise a machine translation** from MyMemory (`src/lookup/translate.ts`), with package sizes like "2x205g" stripped first. This mostly applies to household and beauty products, which rarely have categories. MyMemory also returns stored human translations of *similar* phrases, which can add words that aren't on the package, so only exact human matches (≥ 0.95) or the machine translation are used. The free tier allows about 5,000 characters a day; if it's unavailable, the original name is kept.
+   - Chrome's built-in on-device Translator API would be better, but it only works on desktop, not phones.
 4. If nothing is found, the user types the name. (A "search the web for this barcode" link was tried and removed as one step too many.)
 
 Other databases were considered: UPCitemdb has good English names but blocks browser requests (it would need a small proxy such as a Cloudflare Worker); the USDA database didn't find common products by barcode; paid services weren't worth it.

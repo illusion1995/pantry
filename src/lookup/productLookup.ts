@@ -22,20 +22,24 @@ const FIELDS = [
   'brands',
   'quantity',
   'image_front_small_url',
+  'categories_hierarchy',
 ].join(',');
 
 export type LookupResult =
   | {
       kind: 'found';
       product: ProductInfo;
-      /** Set when the name was machine-translated because no English name exists. */
-      translatedFrom?: { language: string; original: string };
+      /**
+       * Set when the product has no English name, so the name shown is an
+       * English description or a translation. `original` is what the package says.
+       */
+      translatedFrom?: { language?: string; original: string };
     }
   | { kind: 'not-found' }
   | { kind: 'offline' };
 
 type SourceResult =
-  | { kind: 'found'; product: ProductInfo; english: boolean; language?: string }
+  | { kind: 'found'; product: ProductInfo; english: boolean; language?: string; category?: string }
   | { kind: 'not-found' }
   | { kind: 'error' };
 
@@ -48,12 +52,16 @@ interface OffProduct {
   brands?: string;
   quantity?: string;
   image_front_small_url?: string;
+  categories_hierarchy?: string[];
 }
 
 /**
  * Looks a barcode up in every source at once and prefers an English name.
  * If the product only has a name in another language (common for bilingual
- * Canadian packaging), that name is translated. Never throws.
+ * Canadian packaging), it's named by its English category instead
+ * ("Palets Bretons" → "Plain butter shortbreads"), which is far more reliable
+ * than machine translation of brand-style names. Only products without a
+ * useful category are machine-translated. Never throws.
  */
 export async function lookupBarcode(barcode: string): Promise<LookupResult> {
   if (!navigator.onLine) return { kind: 'offline' };
@@ -68,13 +76,37 @@ export async function lookupBarcode(barcode: string): Promise<LookupResult> {
   if (english) return { kind: 'found', product: english.product };
 
   const best = found[0];
-  const translated = best.language ? await translateToEnglish(best.product.name, best.language) : null;
-  if (!translated || !best.language) return { kind: 'found', product: best.product };
+  const englishName =
+    best.category ??
+    (best.language ? await translateToEnglish(withoutPackageSize(best.product.name), best.language) : null);
+  if (!englishName) return { kind: 'found', product: best.product };
   return {
     kind: 'found',
-    product: { ...best.product, name: translated },
+    product: { ...best.product, name: englishName },
     translatedFrom: { language: best.language, original: best.product.name },
   };
+}
+
+/**
+ * The most specific English category, as a name: "en:plain-butter-shortbreads"
+ * → "Plain butter shortbreads". Skipped when the product is only loosely
+ * categorized ("Snacks" says too little to recognize it).
+ */
+function englishCategory(hierarchy: string[] | undefined): string | undefined {
+  const english = (hierarchy ?? []).filter((tag) => tag.startsWith('en:'));
+  if (english.length < 3) return undefined;
+  const words = english[english.length - 1].slice(3).replace(/-/g, ' ').trim();
+  return words ? words.charAt(0).toLocaleUpperCase() + words.slice(1) : undefined;
+}
+
+/** "NESTLÉ DESSERT Noir 2x205g" → "NESTLÉ DESSERT Noir". Sizes confuse the translator and are shown separately. */
+function withoutPackageSize(name: string): string {
+  const stripped = name
+    .replace(/\b\d+\s*x\s*\d+([.,]\d+)?\s*(g|kg|mg|ml|cl|dl|l|oz|lb)\b/gi, '')
+    .replace(/\b\d+([.,]\d+)?\s*(g|kg|mg|ml|cl|dl|l|oz|lb)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return stripped || name;
 }
 
 async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
@@ -112,6 +144,7 @@ async function lookupIn(host: string, barcode: string): Promise<SourceResult> {
     kind: 'found',
     english: Boolean(englishName),
     language,
+    category: englishCategory(p.categories_hierarchy),
     product: {
       barcode,
       name,
