@@ -11,6 +11,22 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 - **Data and sign-in:** Firebase (Cloud Firestore + Google sign-in), free Spark plan. Config is in [`src/firebaseConfig.ts`](src/firebaseConfig.ts); access rules are in [`firestore.rules`](firestore.rules).
 - **Product names and photos:** free public databases from the Open Food Facts project: [Open Food Facts](https://world.openfoodfacts.org), [Open Products Facts](https://world.openproductsfacts.org), [Open Beauty Facts](https://world.openbeautyfacts.org) and [Open Pet Food Facts](https://world.openpetfoodfacts.org). Names with no English version are translated with [MyMemory](https://mymemory.translated.net). Products none of them know are looked up in [UPC Database](https://upcdatabase.org) and [UPCitemdb](https://www.upcitemdb.com) through a small Cloudflare Worker ([`worker/`](worker/README.md)), free plans throughout.
 
+## Accounts and services
+
+Everything runs on free plans. No payment method is on file anywhere.
+
+| Service | What it's for | Where / account | Free-plan limits | Deployed by |
+| --- | --- | --- | --- | --- |
+| **GitHub** | Code and hosting (GitHub Pages) | Repo [illusion1995/pantry](https://github.com/illusion1995/pantry) (public, required for free Pages) | Plenty | Automatically on push to `main` |
+| **Firebase** | Google sign-in and the shared database (Firestore) | Project `pantry-ba55b`, Spark plan. Google sign-in enabled; authorized domain `illusion1995.github.io` | 1 GiB stored, 50K reads and 20K writes a day | Rules: by hand (see [Deploying](#deploying)) |
+| **Cloudflare** | The lookup Worker ([`worker/`](worker/README.md)) | Worker `pantry-lookup` at https://pantry-lookup.wayne-pielsticker.workers.dev, free Workers plan | 100,000 requests a day | By hand: `npm run worker:deploy` |
+| **UPC Database** | Extra barcode lookups (through the Worker) | Free account; its API token is stored only as the Cloudflare secret `UPCDATABASE_KEY` | 100 lookups a day, resets nightly | n/a |
+| **UPCitemdb** | Extra barcode lookups (through the Worker) | No account (free trial API) | About 100 lookups a day, per internet address | n/a |
+| **Open Food / Products / Beauty / Pet Food Facts** | Main barcode lookups | No account | Be reasonable | n/a |
+| **MyMemory** | Translating non-English product names | No account | About 5,000 characters a day | n/a |
+
+Things that are **not** in the repo on purpose: the UPC Database token (Cloudflare secret) and the Firebase/GitHub/Cloudflare logins.
+
 ## Features
 
 | Screen | What it does |
@@ -19,7 +35,7 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 | My pantry | Everything in stock, split into **Food** and **Household** tabs (Household = cleaning supplies, toiletries, pet food), with search and big −/+ buttons. The last tab used is remembered. Searching on the wrong tab offers "Look in Food/Household". Using the last one moves it to Need to buy (with Undo). |
 | Need to buy | Everything at zero, filled in automatically, in Food and Household sections. **Share list** sends it by text/email via the phone's share menu (grouped the same way). **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
-| Photos | Tap a picture to see it bigger. The yellow pen badge on a picture (or the empty "Add photo" box) offers **Take a photo** or **Choose from my photos**, both while adding an item and on Change item. Her own photo always wins over the database picture; removing it brings the database picture back. |
+| Photos | Tap a picture to see it bigger. The yellow pen badge on a picture (or the empty "Add photo" box) offers **Take a photo** or **Choose from my photos**, both while adding an item and on Change item. The user's own photo always wins over the database picture; removing it brings the database picture back. |
 | Change item | Tap an item's name to rename it, fix its count, change its photo, move it between Food and Household, or delete it. |
 | Share this pantry | Add or remove family members by Google email. Sign out. |
 | Back up | Saves the pantry to a JSON file and restores from one. |
@@ -28,7 +44,12 @@ Design goals: large text (20px base, [Atkinson Hyperlegible Next](https://www.br
 
 ## Running it locally
 
-Requires Node.js 22 or newer (the deploy workflow uses 24).
+Tools on the development PC:
+
+- **Node.js 22+** (the deploy workflow uses 24). `firebase-tools` and `wrangler` are dev dependencies, so `npx firebase …` and `npx wrangler …` work after `npm install`.
+- **GitHub CLI** (`gh`), signed in as `illusion1995`, for pushing and checking deploy runs.
+- **Java 21+** (Microsoft OpenJDK 21), only for the Firebase emulators.
+- **Wrangler** signed in to the Cloudflare account (`npx wrangler login`), only for deploying the Worker.
 
 ```bash
 npm install
@@ -54,6 +75,8 @@ npm run dev:emulators    # terminal 2: the app on :5173, wired to the emulators
 
 In the browser console, `await emulatorSignIn('someone@example.test')` signs in as a fake Google account (the pop-up sign-in isn't needed). Emulator data is thrown away when they stop.
 
+`npm run dev:emulators` also points the app's extra lookups at a locally running Worker (`.env.emulators` sets `VITE_LOOKUP_URL`). Start it with `npm run worker:dev` in a third terminal; without it, extra lookups just come back empty. To include UPC Database locally, put `UPCDATABASE_KEY=…` in `worker/.dev.vars` (git-ignored).
+
 ## Deploying
 
 - **The app:** push to `main`. GitHub Actions builds and publishes it in about a minute. Phones pick up the new version the next time the app is opened (sometimes it takes a second reload, because the service worker updates in the background).
@@ -63,6 +86,8 @@ In the browser console, `await emulatorSignIn('someone@example.test')` signs in 
   npx firebase login                              # once
   npx firebase deploy --only firestore:rules      # uses the project in .firebaserc
   ```
+
+- **The lookup Worker:** not deployed by GitHub Actions. After editing `worker/`, run `npm run worker:deploy` (needs `npx wrangler login` once). To change the UPC Database token, the account owner runs `npx wrangler secret put UPCDATABASE_KEY --config worker/wrangler.jsonc` and pastes it at the prompt. Details in [worker/README.md](worker/README.md).
 
 ## How it works
 
@@ -82,6 +107,8 @@ pantries/{pantryId}/items/{itemId}
   section?                             // "food" | "household"; missing = food (items saved before tabs existed)
 ```
 
+An item with `quantity` 0 is "out" and appears on Need to buy. Nothing is deleted when it runs out.
+
 ### Food and Household
 
 Each item has a `section`. When a scanned product is found, the database it came from decides: Open Food Facts → Food; Open Products, Beauty and Pet Food Facts → Household. Food-database products categorized as pet food or non-food also go to Household. When nothing is found (or the item is added by name), the app asks "Where does it go?" and won't add the item until one is chosen. Items can be moved on Change item.
@@ -90,9 +117,7 @@ Each item has a `section`. When a scanned product is found, the database it came
 
 Cloud Storage for Firebase now requires the paid Blaze plan, so photos are stored **inside the item document** instead, which keeps the project on the free Spark plan. `src/photos.ts` shrinks each photo to at most 480 px on its longest side (WebP, falling back to JPEG), typically 20–50 KB, and never more than ~300 KB (a Firestore document can hold 1 MB). The camera button uses `<input type="file" accept="image/*" capture="environment">`; the gallery button leaves out `capture`, which opens Android's photo picker (it includes Google Photos, even cloud-only pictures).
 
-Photo changes are saved with the rest of the form ("Add to pantry" or "Save changes"). The bigger view and the photo choices are native `<dialog>`s, so the phone's Back button closes them.
-
-An item with `quantity` 0 is "out" and appears on Need to buy. Nothing is deleted when it runs out.
+Photo changes are saved with the rest of the form ("Add to pantry" or "Save changes"). The bigger view and the photo choices are native `<dialog>`s, so the phone's Back button closes them. Product pictures load with `referrerPolicy="no-referrer"`, because store sites (Home Depot, Target) often block pictures shown on other sites.
 
 ### Sharing and security
 
@@ -137,7 +162,7 @@ src/
   firebase.ts             Firebase app/auth/Firestore setup (and emulator wiring)
   firebaseConfig.ts       the project's public web config
   data/
-    types.ts              PantryItem, ProductInfo
+    types.ts              PantryItem, ProductInfo, Section
     store.ts              PantryStore: the storage interface every screen uses
     firestoreStore.ts     Firestore implementation of PantryStore
     pantry.ts             the active store + shared helpers (create item, barcode normalizing)
@@ -149,7 +174,7 @@ src/
   lookup/extraLookup.ts   ask our Cloudflare Worker when the Open Facts databases miss
   photos.ts               shrink camera/gallery photos before saving
   scanner/                camera view and barcode reading
-  components/             shared pieces (amount picker, photo control and viewer, toast, icons…)
+  components/             shared pieces (amount picker, photo control and viewer, Food/Household tabs and choice, toast, icons…)
   screens/                one file per screen
   styles.css              design tokens and all styles
 firestore.rules           Firestore security rules
@@ -171,6 +196,9 @@ Edit `public/icon.svg`, then run `npm run icons`.
 | "That change couldn't be saved (permission-denied)" | The person isn't a member of the pantry, or `firestore.rules` weren't published. |
 | Camera says it's blocked | Allow camera access for the site in Chrome's site settings (or the phone's app permissions). The camera only works on `https://` or `localhost`. |
 | Phone still shows the old version after a deploy | Close and reopen the app, or reload twice. |
+| Sign-in window doesn't open | Chrome blocked the pop-up. Allow pop-ups for the site. In the installed app, signing in once in a normal Chrome tab also works (they share the sign-in). |
+| Household products (CLR etc.) suddenly aren't found | Check the Worker: `curl -H "Origin: https://illusion1995.github.io" "https://pantry-lookup.wayne-pielsticker.workers.dev/lookup?barcode=078291310825"` should return CLR. If it doesn't, check the Worker's logs in the Cloudflare dashboard (Workers & Pages → pantry-lookup → Logs), whether the UPC Database token still works, or whether a daily limit was hit (resets overnight). |
+| A new product's name comes up in French | It has no English name or English category, and the translation service was unavailable or over its daily limit (resets the next day). The name can always be changed with **Change the name**. |
 
 ## Ideas for later
 

@@ -49,5 +49,8 @@ There is no unit test suite. Verify changes by running the app (mobile viewport,
 ## Gotchas
 
 - Vite hot reload can load a half-applied change when several edits land in quick succession, which shows up as errors like "X is not defined" even though the file is correct. Reload the page, or restart the dev server, before trusting an error.
-- Stopping the emulator process from a script can leave the Java/Node emulator processes running on ports 4400/8085/9099.
+- Stopping the emulator process from a script can leave the Java/Node emulator processes running on ports 4400/8085/9099 (and `workerd` on 8787 after `worker:dev`). Kill them by port when done.
+- In browser test scripts, leave a short `await` between two programmatic clicks: React hasn't applied the first click's state yet, so the second click's handler sees the old state. A real finger can't do that.
+- Restarting the emulators wipes their data, but the browser's Firestore cache still holds the old test pantry for a moment. Use a fresh test email per test run.
+- A modal `<dialog>`'s `close` event and screenshots wait for a repaint, which a hidden preview pane doesn't do. Don't mistake that for a bug.
 - The Firebase web config in `src/firebaseConfig.ts` is public by design; access control lives entirely in `firestore.rules`.

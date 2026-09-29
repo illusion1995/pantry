@@ -1,6 +1,6 @@
 # Pantry: how to use it
 
-Pantry keeps track of the food in your pantry. You scan things when you put them away, tap a button when you use something, and the app makes your shopping list for you.
+Pantry keeps track of the food and household supplies in your home. You scan things when you put them away, tap a button when you use something, and the app makes your shopping list for you.
 
 **Open the app:** https://illusion1995.github.io/pantry/
 
@@ -19,7 +19,7 @@ You stay signed in. You won't need to do this again.
 
 ## The home screen
 
-- **Scan item** (the big yellow button): add food you bought.
+- **Scan item** (the big yellow button): add things you bought.
 - **My pantry** (with a number): everything you have. The number is how many different items are in stock.
 - **Need to buy** (with a number): things you've run out of. The number turns red when something is on the list.
 
@@ -29,7 +29,7 @@ The phone's **Back** button, or the **‹ Back** button at the top of each scree
 
 ---
 
-## Adding food you bought
+## Adding things you bought
 
 1. Tap **Scan item**. The first time, the phone asks to use the camera. Tap **Allow**.
 2. Hold the barcode inside the **yellow box**. The phone buzzes when it reads it.
@@ -60,14 +60,14 @@ The phone's **Back** button, or the **‹ Back** button at the top of each scree
 
 ---
 
-## Adding food without a barcode
+## Adding something without a barcode
 
-For fruit and vegetables, bulk bins, or home-canned food:
+For fruit and vegetables, bulk bins, home-canned food, or anything else without a barcode:
 
 1. On the home screen, tap **Add something without a barcode**. You can also tap **No barcode? Type the name** on the scan screen.
 2. Type what it is, for example *Potatoes*.
 3. If it's already in the app, it shows up underneath. Tap it to add to it.
-4. Tap **Next**, choose how many, and tap **Add to pantry**.
+4. Tap **Next**. For something new, tap **Food** or **Household**. Choose how many, and tap **Add to pantry**.
 
 ---
 
@@ -116,6 +116,7 @@ In **My pantry** or **Need to buy**, tap an item's **name** to open **Change ite
 - **Fix the name**, then tap **Save changes**.
 - **Fix how many you have**, then tap **Save changes**.
 - **Change the picture** with the yellow pen, then tap **Save changes**.
+- **Move it** between **Food** and **Household**, then tap **Save changes**.
 - **Delete item**, for something you don't buy anymore. It's removed from the pantry and the shopping list.
 
 ---
