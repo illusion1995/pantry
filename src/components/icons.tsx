@@ -82,6 +82,21 @@ export const CheckIcon = () => (
   </Icon>
 );
 
+export const CameraIcon = () => (
+  <Icon>
+    <path d="M4 8h3l1.6-2.4a1.4 1.4 0 0 1 1.2-.6h4.4a1.4 1.4 0 0 1 1.2.6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Icon>
+);
+
+export const PhotosIcon = () => (
+  <Icon>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="9" cy="10" r="1.8" />
+    <path d="M21 16l-5-5-8 9" />
+  </Icon>
+);
+
 export const PencilIcon = () => (
   <Icon>
     <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" />

@@ -33,6 +33,8 @@ There is no unit test suite. Verify changes by running the app (mobile viewport,
 - Product lookup (`src/lookup/`) only runs for barcodes not already in the pantry, so it must never be used to rewrite saved items; the user may have renamed them. Any new lookup source has to allow browser requests (CORS) and need no secret key, because this is a public static site.
 - Emails in `memberEmails` are always lowercase (`normalizeEmail`); the rules compare against `request.auth.token.email.lower()`.
 - New item fields must stay compatible with `validItem()` in `firestore.rules` (string `name` 1–200 chars, integer `quantity`).
+- User photos are stored inline in the item (`photo`, a data URL from `shrinkPhoto` in `src/photos.ts`), not in Firebase Storage, which would force the paid Blaze plan. Keep them small. Show pictures through `pictureOf(item)` so the user's photo wins over `imageUrl`. To remove a field, `update` with `null` (the store turns it into `deleteField()`).
+- Popups are native `<dialog>`s (Back closes them). Their `close` event only fires on the next repaint, so buttons that close a dialog also call `onClose` directly.
 - Routing is hash-based (`src/router.ts`) so it works under the `/pantry/` subpath on GitHub Pages and the phone's Back button works. Vite `base` is `./` for the same reason.
 
 ## Style

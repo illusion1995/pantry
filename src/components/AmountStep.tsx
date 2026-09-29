@@ -1,7 +1,7 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { createItem, describe, store } from '../data/pantry';
 import type { PantryItem, ProductInfo } from '../data/types';
-import { ItemThumb } from './ItemThumb';
+import { PhotoControl } from './PhotoControl';
 import { QuantityPicker } from './QuantityPicker';
 
 type Target =
@@ -30,6 +30,17 @@ export function AmountStep({ target, question = 'How many are you adding?', note
 
   const shown = target.kind === 'existing' ? target.item : target.product;
   const details = describe(shown);
+  // The user's own photo. Only saved together with the amount.
+  const [photo, setPhoto] = useState(shown.photo);
+  const photoChanged = photo !== shown.photo;
+  const photoControl = (
+    <PhotoControl
+      name={name}
+      photo={photo}
+      fallbackUrl={shown.imageUrl}
+      onChange={(next) => setPhoto(next ?? undefined)}
+    />
+  );
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -42,9 +53,10 @@ export function AmountStep({ target, question = 'How many are you adding?', note
     try {
       if (target.kind === 'existing') {
         const quantity = await store.adjustQuantity(target.item.id, amount);
-        onAdded({ ...target.item, quantity }, amount);
+        if (photoChanged) await store.update(target.item.id, { photo: photo ?? null });
+        onAdded({ ...target.item, quantity, photo }, amount);
       } else {
-        const item = await createItem({ ...target.product, name }, amount);
+        const item = await createItem({ ...target.product, name, photo }, amount);
         onAdded(item, amount);
       }
     } catch (e) {
@@ -60,7 +72,7 @@ export function AmountStep({ target, question = 'How many are you adding?', note
 
       {target.kind === 'existing' ? (
         <div className="product">
-          <ItemThumb name={shown.name} imageUrl={shown.imageUrl} large />
+          {photoControl}
           <div>
             <h2 className="product__name">{shown.name}</h2>
             {details && <p className="product__details">{details}</p>}
@@ -96,7 +108,7 @@ export function AmountStep({ target, question = 'How many are you adding?', note
         </div>
       ) : (
         <div className="product">
-          <ItemThumb name={name} imageUrl={shown.imageUrl} large />
+          {photoControl}
           <div>
             <h2 className="product__name">{name}</h2>
             {details && <p className="product__details">{details}</p>}
@@ -106,6 +118,8 @@ export function AmountStep({ target, question = 'How many are you adding?', note
           </div>
         </div>
       )}
+
+      {target.kind === 'new' && editingName && photoControl}
 
       <QuantityPicker label={question} value={amount} onChange={setAmount} />
 

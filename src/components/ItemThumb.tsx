@@ -8,11 +8,12 @@ interface Props {
 
 /** Product photo, or the first letter of the name when there is no photo. */
 export function ItemThumb({ name, imageUrl, large }: Props) {
-  const [failed, setFailed] = useState(false);
+  // Remember which picture failed, so a new picture gets its own chance to load.
+  const [failedUrl, setFailedUrl] = useState<string>();
   const className = large ? 'thumb thumb--large' : 'thumb';
 
-  if (imageUrl && !failed) {
-    return <img className={className} src={imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />;
+  if (imageUrl && imageUrl !== failedUrl) {
+    return <img className={className} src={imageUrl} alt="" loading="lazy" onError={() => setFailedUrl(imageUrl)} />;
   }
   return (
     <span className={`${className} thumb--letter`} aria-hidden="true">

@@ -48,6 +48,18 @@ The phone's **Back** button, or the **‹ Back** button at the top of each scree
 
 ---
 
+## Pictures
+
+- **See a picture bigger:** tap any picture, in My pantry, Need to buy, or when adding or changing an item. Tap anywhere, or press the phone's **Back** button, to close it.
+- **Add or change a picture:** tap the round yellow **pen** on the corner of the picture. If there's no picture yet, tap the **Add photo** box. Then choose:
+  - **Take a photo** opens the camera. Take the picture and tap the check mark or **OK**.
+  - **Choose from my photos** shows the pictures on your phone, including Google Photos.
+- Your own photo is always shown instead of the one the app found.
+- **Remove my photo** (in the same menu) goes back to the app's picture, if there was one.
+- A new picture is saved when you tap **Add to pantry** or **Save changes**.
+
+---
+
 ## Adding food without a barcode
 
 For fruit and vegetables, bulk bins, or home-canned food:
@@ -86,6 +98,7 @@ In **My pantry** or **Need to buy**, tap an item's **name** to open **Change ite
 
 - **Fix the name**, then tap **Save changes**.
 - **Fix how many you have**, then tap **Save changes**.
+- **Change the picture** with the yellow pen, then tap **Save changes**.
 - **Delete item**, for something you don't buy anymore. It's removed from the pantry and the shopping list.
 
 ---

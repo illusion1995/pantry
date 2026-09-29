@@ -57,6 +57,7 @@ export async function createItem(product: ProductInfo, quantity: number): Promis
     brand: product.brand?.trim() || undefined,
     size: product.size?.trim() || undefined,
     imageUrl: product.imageUrl,
+    photo: product.photo,
     quantity,
     createdAt: now,
     updatedAt: now,
@@ -67,6 +68,11 @@ export async function createItem(product: ProductInfo, quantity: number): Promis
 
 export function byName(a: PantryItem, b: PantryItem): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+}
+
+/** The picture to show: the user's own photo wins over the database's. */
+export function pictureOf(item: Pick<PantryItem, 'photo' | 'imageUrl'>): string | undefined {
+  return item.photo ?? item.imageUrl;
 }
 
 export function describe(item: Pick<PantryItem, 'brand' | 'size'>): string {

@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   increment,
   onSnapshot,
@@ -120,7 +121,15 @@ export function createFirestoreStore(
     },
 
     async update(id, changes: ItemChanges) {
-      send(updateDoc(itemRef(id), { ...changes, updatedAt: Date.now() }));
+      const { photo, ...rest } = changes;
+      send(
+        updateDoc(itemRef(id), {
+          ...rest,
+          // undefined is skipped (ignoreUndefinedProperties), so removing needs deleteField().
+          ...(photo === null ? { photo: deleteField() } : photo !== undefined ? { photo } : {}),
+          updatedAt: Date.now(),
+        }),
+      );
     },
 
     async adjustQuantity(id, delta) {

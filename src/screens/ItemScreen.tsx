@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { ItemThumb } from '../components/ItemThumb';
+import { PhotoControl } from '../components/PhotoControl';
 import { QuantityPicker } from '../components/QuantityPicker';
 import { Screen } from '../components/Screen';
 import { useToast } from '../components/Toast';
@@ -28,6 +28,8 @@ function EditItem({ item }: { item: PantryItem }) {
   const showToast = useToast();
   const [name, setName] = useState(item.name);
   const [quantity, setQuantity] = useState(item.quantity);
+  // The user's own photo; saved with the other changes.
+  const [photo, setPhoto] = useState(item.photo);
   const [error, setError] = useState('');
 
   // Keep the count in step if it changes elsewhere while this screen is open.
@@ -39,7 +41,11 @@ function EditItem({ item }: { item: PantryItem }) {
       setError('Type a name for this item.');
       return;
     }
-    await store.update(item.id, { name: name.trim(), quantity });
+    await store.update(item.id, {
+      name: name.trim(),
+      quantity,
+      ...(photo !== item.photo ? { photo: photo ?? null } : {}),
+    });
     showToast({ message: 'Changes saved.' });
     back();
   }
@@ -54,7 +60,12 @@ function EditItem({ item }: { item: PantryItem }) {
 
   return (
     <form className="stack" onSubmit={save} noValidate>
-      {item.imageUrl && <ItemThumb name={name} imageUrl={item.imageUrl} large />}
+      <PhotoControl
+        name={name}
+        photo={photo}
+        fallbackUrl={item.imageUrl}
+        onChange={(next) => setPhoto(next ?? undefined)}
+      />
       <div className="field">
         <label htmlFor={nameId}>Name</label>
         <input

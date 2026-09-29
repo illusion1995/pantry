@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ItemThumb } from '../components/ItemThumb';
+import { ItemPicture } from '../components/ItemPicture';
 import { MinusIcon, PlusIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { useToast } from '../components/Toast';
@@ -76,14 +76,14 @@ export function PantryScreen() {
             <ul className="shelf">
               {shown.map((item) => (
                 <li key={item.id} className="shelf__item">
-                  <a className="shelf__info" href={`#/item/${encodeURIComponent(item.id)}`}>
-                    <ItemThumb name={item.name} imageUrl={item.imageUrl} />
-                    <span>
+                  <div className="shelf__info">
+                    <ItemPicture item={item} />
+                    <a className="shelf__link" href={`#/item/${encodeURIComponent(item.id)}`}>
                       <span className="shelf__name">{item.name}</span>
                       {describe(item) && <span className="shelf__details">{describe(item)}</span>}
                       {item.quantity === 0 && <span className="shelf__out">Out. It’s on your Need to buy list.</span>}
-                    </span>
-                  </a>
+                    </a>
+                  </div>
                   <div className="shelf__controls">
                     <button
                       type="button"

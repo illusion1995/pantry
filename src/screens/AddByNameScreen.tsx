@@ -4,7 +4,7 @@ import { DoneStep } from '../components/DoneStep';
 import { ItemThumb } from '../components/ItemThumb';
 import { Screen } from '../components/Screen';
 import { useItems } from '../data/hooks';
-import { byName, findByName } from '../data/pantry';
+import { byName, findByName, pictureOf } from '../data/pantry';
 import type { PantryItem } from '../data/types';
 import { back } from '../router';
 
@@ -105,7 +105,7 @@ function NameStep({ onPick, onNew }: { onPick: (item: PantryItem) => void; onNew
             {matches.map((item) => (
               <li key={item.id}>
                 <button type="button" className="match" onClick={() => onPick(item)}>
-                  <ItemThumb name={item.name} imageUrl={item.imageUrl} />
+                  <ItemThumb name={item.name} imageUrl={pictureOf(item)} />
                   <span className="match__name">{item.name}</span>
                   <span className={item.quantity > 0 ? 'tag tag--small' : 'tag tag--small tag--alert'}>
                     {item.quantity}

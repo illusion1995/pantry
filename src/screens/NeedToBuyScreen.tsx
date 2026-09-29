@@ -1,4 +1,4 @@
-import { ItemThumb } from '../components/ItemThumb';
+import { ItemPicture } from '../components/ItemPicture';
 import { ShareIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { useToast } from '../components/Toast';
@@ -55,13 +55,13 @@ export function NeedToBuyScreen() {
           <ul className="notepad">
             {needed.map((item) => (
               <li key={item.id} className="notepad__item">
-                <a className="notepad__info" href={`#/item/${encodeURIComponent(item.id)}`}>
-                  <ItemThumb name={item.name} imageUrl={item.imageUrl} />
-                  <span>
+                <div className="notepad__info">
+                  <ItemPicture item={item} />
+                  <a className="notepad__link" href={`#/item/${encodeURIComponent(item.id)}`}>
                     <span className="notepad__name">{item.name}</span>
                     {describe(item) && <span className="notepad__details">{describe(item)}</span>}
-                  </span>
-                </a>
+                  </a>
+                </div>
                 <a className="btn btn--outline btn--compact" href={`#/restock/${encodeURIComponent(item.id)}`}>
                   Bought it
                 </a>

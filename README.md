@@ -19,7 +19,8 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 | My pantry | Everything in stock, with search and big −/+ buttons. Using the last one moves it to Need to buy (with Undo). |
 | Need to buy | Everything at zero, filled in automatically. **Share list** sends it by text/email via the phone's share menu. **Bought it** adds an item back. |
 | Add without a barcode | For produce, bulk bins, home-canned food. Suggests matching items as you type. |
-| Change item | Tap an item's name to rename it, fix its count, or delete it. |
+| Photos | Tap a picture to see it bigger. The yellow pen badge on a picture (or the empty "Add photo" box) offers **Take a photo** or **Choose from my photos**, both while adding an item and on Change item. Her own photo always wins over the database picture; removing it brings the database picture back. |
+| Change item | Tap an item's name to rename it, fix its count, change its photo, or delete it. |
 | Share this pantry | Add or remove family members by Google email. Sign out. |
 | Back up | Saves the pantry to a JSON file and restores from one. |
 
@@ -77,7 +78,14 @@ pantries/{pantryId}
 pantries/{pantryId}/items/{itemId}
   id, name, quantity (int), createdAt, updatedAt
   barcode?, brand?, size?, imageUrl?   // missing for items added by name
+  photo?                               // the user's own photo, a small WebP/JPEG data URL
 ```
+
+### Photos
+
+Cloud Storage for Firebase now requires the paid Blaze plan, so photos are stored **inside the item document** instead, which keeps the project on the free Spark plan. `src/photos.ts` shrinks each photo to at most 480 px on its longest side (WebP, falling back to JPEG), typically 20–50 KB, and never more than ~300 KB (a Firestore document can hold 1 MB). The camera button uses `<input type="file" accept="image/*" capture="environment">`; the gallery button leaves out `capture`, which opens Android's photo picker (it includes Google Photos, even cloud-only pictures).
+
+Photo changes are saved with the rest of the form ("Add to pantry" or "Save changes"). The bigger view and the photo choices are native `<dialog>`s, so the phone's Back button closes them.
 
 An item with `quantity` 0 is "out" and appears on Need to buy. Nothing is deleted when it runs out.
 
@@ -129,8 +137,9 @@ src/
     backup.ts             backup file save/restore
   lookup/productLookup.ts barcode → name, brand, size, photo (Open Facts databases)
   lookup/translate.ts     translate non-English product names to English
+  photos.ts               shrink camera/gallery photos before saving
   scanner/                camera view and barcode reading
-  components/             shared pieces (amount picker, toast, screen frame, icons…)
+  components/             shared pieces (amount picker, photo control and viewer, toast, icons…)
   screens/                one file per screen
   styles.css              design tokens and all styles
 firestore.rules           Firestore security rules
