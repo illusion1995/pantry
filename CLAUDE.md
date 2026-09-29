@@ -14,6 +14,7 @@ npm run typecheck       # tsc --noEmit (TypeScript 7)
 npm run build           # typecheck + production build
 npm run emulators       # local Auth + Firestore emulators (needs Java 21+)
 npm run dev:emulators   # app wired to the emulators; sign in with emulatorSignIn('x@example.test') in the console
+npm run worker:dev      # lookup Worker on :8787 (dev:emulators points the app at it)
 ```
 
 There is no unit test suite. Verify changes by running the app (mobile viewport, 375px wide) and, for anything touching data or `firestore.rules`, against the emulators with fake accounts, never against the live project's data.
@@ -21,6 +22,7 @@ There is no unit test suite. Verify changes by running the app (mobile viewport,
 ## Deploying
 
 - Pushing to `main` deploys the app to GitHub Pages via `.github/workflows/deploy.yml`. Check the run with `gh run list` / `gh run watch`.
+- The lookup Worker in `worker/` is **not** deployed by the workflow either: `npm run worker:deploy` (needs `npx wrangler login`). Its UPC Database key is a Cloudflare secret; the user sets it with `npx wrangler secret put`. Never put that key in the app or the repo.
 - `firestore.rules` is **not** deployed by the workflow. After changing it, publish with `npx firebase deploy --only firestore:rules` (needs `npx firebase login`) or by pasting into the Firebase console, and tell the user.
 
 ## Architecture rules

@@ -1,0 +1,10 @@
+// Cloudflare Worker that looks up barcodes the free Open Facts databases don't
+// know (mostly North American household products). Deploy with
+// `npx wrangler deploy --config worker/wrangler.jsonc`. See worker/README.md.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "pantry-lookup",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true }
+}

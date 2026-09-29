@@ -9,7 +9,7 @@ It's an installable web app (PWA): it runs in Chrome, can be added to the home s
 - **Using the app:** see the [User guide](docs/USER_GUIDE.md), written for the people who use it every day.
 - **Hosting:** GitHub Pages, deployed automatically by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main`.
 - **Data and sign-in:** Firebase (Cloud Firestore + Google sign-in), free Spark plan. Config is in [`src/firebaseConfig.ts`](src/firebaseConfig.ts); access rules are in [`firestore.rules`](firestore.rules).
-- **Product names and photos:** free public databases from the Open Food Facts project: [Open Food Facts](https://world.openfoodfacts.org), [Open Products Facts](https://world.openproductsfacts.org), [Open Beauty Facts](https://world.openbeautyfacts.org) and [Open Pet Food Facts](https://world.openpetfoodfacts.org). Names with no English version are translated with [MyMemory](https://mymemory.translated.net). None of these need an account or key.
+- **Product names and photos:** free public databases from the Open Food Facts project: [Open Food Facts](https://world.openfoodfacts.org), [Open Products Facts](https://world.openproductsfacts.org), [Open Beauty Facts](https://world.openbeautyfacts.org) and [Open Pet Food Facts](https://world.openpetfoodfacts.org). Names with no English version are translated with [MyMemory](https://mymemory.translated.net). Products none of them know are looked up in [UPC Database](https://upcdatabase.org) and [UPCitemdb](https://www.upcitemdb.com) through a small Cloudflare Worker ([`worker/`](worker/README.md)), free plans throughout.
 
 ## Features
 
@@ -122,9 +122,10 @@ A barcode is only looked up the **first** time it's scanned. After that the app 
    - **Its English category**, when the product is categorized at least three levels deep: `en:plain-butter-shortbreads` → "Plain butter shortbreads". Open Food Facts' category taxonomy is always English and accurate, while machine translation mangles brand-style names ("Palets Bretons" → "Breton pallets", "Dessert Noir" → "Dessert Black").
    - **Otherwise a machine translation** from MyMemory (`src/lookup/translate.ts`), with package sizes like "2x205g" stripped first. This mostly applies to household and beauty products, which rarely have categories. MyMemory also returns stored human translations of *similar* phrases, which can add words that aren't on the package, so only exact human matches (≥ 0.95) or the machine translation are used. The free tier allows about 5,000 characters a day; if it's unavailable, the original name is kept.
    - Chrome's built-in on-device Translator API would be better, but it only works on desktop, not phones.
-4. If nothing is found, the user types the name. (A "search the web for this barcode" link was tried and removed as one step too many.)
+4. If none of the four know it, the app asks our **Cloudflare Worker** ([`worker/`](worker/README.md)), which checks UPC Database and UPCitemdb. Those cover many North American household products (CLR, Windex, Dawn) but block requests from web pages, and UPC Database needs a key that must stay private. The Worker's `category` decides Food or Household ("Household Supplies" → Household); if it's unclear, the app asks.
+5. If nothing is found anywhere, the user types the name. (A "search the web for this barcode" link was tried and removed as one step too many.)
 
-Other databases were considered: UPCitemdb has good English names and North American household products (it has CLR, which none of the Open Facts databases do) but blocks browser requests, so it would need a small proxy such as a Cloudflare Worker; UPC Database needs an account key and also blocks browser requests; brocade.io no longer responds; the USDA database didn't find common products by barcode; paid services weren't worth it.
+Also considered: brocade.io no longer responds; the USDA database didn't find common products by barcode; paid services weren't worth it.
 
 ## Code layout
 
@@ -145,6 +146,7 @@ src/
     backup.ts             backup file save/restore
   lookup/productLookup.ts barcode → name, brand, size, photo (Open Facts databases)
   lookup/translate.ts     translate non-English product names to English
+  lookup/extraLookup.ts   ask our Cloudflare Worker when the Open Facts databases miss
   photos.ts               shrink camera/gallery photos before saving
   scanner/                camera view and barcode reading
   components/             shared pieces (amount picker, photo control and viewer, toast, icons…)
@@ -154,6 +156,7 @@ firestore.rules           Firestore security rules
 firebase.json, .firebaserc  Firebase CLI / emulator config
 public/                   app icons (generated from icon.svg)
 docs/USER_GUIDE.md        guide for the people using the app
+worker/                   Cloudflare Worker for extra barcode lookups (its own README)
 ```
 
 ## Regenerating icons

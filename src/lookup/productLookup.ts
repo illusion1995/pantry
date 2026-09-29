@@ -1,4 +1,5 @@
 import type { ProductInfo, Section } from '../data/types';
+import { lookupElsewhere } from './extraLookup';
 import { translateToEnglish } from './translate';
 
 /**
@@ -69,6 +70,9 @@ export async function lookupBarcode(barcode: string): Promise<LookupResult> {
   const results = await Promise.all(SOURCES.map((source) => lookupIn(source, barcode)));
   const found = results.filter((r) => r.kind === 'found');
   if (found.length === 0) {
+    // Last try: databases reached through our Worker (English, North American products).
+    const elsewhere = await lookupElsewhere(barcode);
+    if (elsewhere) return { kind: 'found', product: elsewhere };
     return results.every((r) => r.kind === 'error') ? { kind: 'offline' } : { kind: 'not-found' };
   }
 

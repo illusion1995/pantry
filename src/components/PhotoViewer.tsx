@@ -28,7 +28,7 @@ export function PhotoViewer({ src, name, onClose }: Props) {
         onClose(); // Don't wait for the close event, which arrives on the next repaint.
       }}
     >
-      <img className="viewer__img" src={src} alt={`Picture of ${name}`} />
+      <img className="viewer__img" src={src} alt={`Picture of ${name}`} referrerPolicy="no-referrer" />
       <p className="viewer__name">{name}</p>
       <button type="button" className="btn btn--primary" autoFocus>
         Close

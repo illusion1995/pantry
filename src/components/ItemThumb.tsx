@@ -13,7 +13,17 @@ export function ItemThumb({ name, imageUrl, large }: Props) {
   const className = large ? 'thumb thumb--large' : 'thumb';
 
   if (imageUrl && imageUrl !== failedUrl) {
-    return <img className={className} src={imageUrl} alt="" loading="lazy" onError={() => setFailedUrl(imageUrl)} />;
+    // no-referrer: store sites (Home Depot, Target…) often block pictures shown on other sites.
+    return (
+      <img
+        className={className}
+        src={imageUrl}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setFailedUrl(imageUrl)}
+      />
+    );
   }
   return (
     <span className={`${className} thumb--letter`} aria-hidden="true">
